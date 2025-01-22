@@ -11,7 +11,7 @@ namespace app::services
         : apiKey_(apiKey) {}
 
     std::future<utils::Result<std::vector<domain::MediaMetadata>>>
-    OmdbMediaProvider::SearchMedia(const std::string &query, int page)
+    OmdbMediaProvider::SearchMedia(const std::string &query, const MediaFilter &filter, int page)
     {
         return std::async(std::launch::async, [=]() -> utils::Result<std::vector<domain::MediaMetadata>>
                           {
@@ -92,4 +92,26 @@ namespace app::services
                           { return utils::Result<domain::MediaMetadata>::Error("Not implemented"); });
     }
 
+    std::string OmdbMediaProvider::GetProviderVersion() const
+    {
+        return "1.0.0";
+    }
+
+    ProviderCapabilities OmdbMediaProvider::GetCapabilities() const
+    {
+        return {
+            .supportedTypes = {"movie"}, // OMDb only supports movies
+            .supportedGenres = {},       // OMDb doesn't expose genre list
+            .supportedSortOptions = {},  // No explicit sort options
+            .supportsSearch = true,
+            .supportsCatalog = false};
+    }
+
+    std::future<utils::Result<std::vector<domain::MediaMetadata>>>
+    OmdbMediaProvider::GetCatalog(const MediaFilter &filter, int page)
+    {
+        return std::async(std::launch::async, [=]() -> utils::Result<std::vector<domain::MediaMetadata>>
+                          { return utils::Result<std::vector<domain::MediaMetadata>>::Error(
+                                "Catalog browsing not supported by OMDb"); });
+    }
 } // namespace app::services

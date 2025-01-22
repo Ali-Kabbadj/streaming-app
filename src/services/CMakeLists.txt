@@ -6,6 +6,13 @@ add_library(services
     providers/omdbMediaProvider.hpp
     providers/tmdb_provider.hpp
     providers/tmdb_provider.cpp
+    providers/provider_repository.cpp
+    providers/provider_repository.hpp
+    providers/utils/rating_normalizer.hpp
+    providers/utils/rating_normalizer.cpp
+    cache/cache_manager.hpp
+    cache/cache_manager.cpp
+    # auth/auth_manager.hpp
 )
 
 target_link_libraries(services

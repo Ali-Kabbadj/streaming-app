@@ -14,7 +14,7 @@ namespace app::domain
         Episode
     };
 
-    struct MediaId
+     struct MediaId
     {
         std::string id;
         MediaType type;
@@ -29,11 +29,12 @@ namespace app::domain
         std::string overview;
         std::vector<std::string> genres;
         std::chrono::system_clock::time_point releaseDate;
-        double rating;
+        float rating;
         int voteCount;
         std::optional<std::string> posterPath;
         std::optional<std::string> backdropPath;
         float popularity = 0.0f;
+        float normalizedRating;
     };
 
     struct MovieInfo : MediaMetadata

@@ -72,13 +72,16 @@ namespace app::ui
         try {
             utils::Logger::Info("Processing 'movies' IPC request.");
             
-            // Fetch movies from MediaService (pages 1 and 2)
+            // Create a MediaFilter object
+            services::MediaFilter filter;
+            filter.sortBy = "popularity"; // Default sort by popularity
+            filter.sortDesc = true;       // Sort in descending order
+
+            // Fetch movies from MediaService (page 1)
             auto& mediaService = services::MediaService::Instance();
-            auto resultFuture = mediaService.UnifiedSearch("", 1); // Empty query for popular
-            // auto result1Future = mediaService.UnifiedSearch("", 2);
+            auto resultFuture = mediaService.UnifiedSearch("", filter, 1); // Empty query for popular movies
 
             auto result = resultFuture.get();
-            // auto result1 = result1Future.get();
 
             if (result.IsOk()) {
                 ipc::json movieArray = ipc::json::array();
@@ -90,7 +93,6 @@ namespace app::ui
 
                     try {
                         // Safely extract values
-                        utils::Logger::Info(fmt::format("Processed: {}",  movie.id.id));
                         const std::string& safeTitle = !movie.title.empty() ? 
                             movie.title : "Untitled";
                         const std::string& safeOverview = !movie.overview.empty() ? 

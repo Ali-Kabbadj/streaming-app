@@ -3,6 +3,8 @@
 #include "services/providers/tmdb_provider.hpp"
 #include "core/utils/logger.hpp"
 #include <fmt/format.h>
+#include "../cache/cache_manager.hpp"
+#include "../providers/utils/rating_normalizer.hpp"
 
 namespace app::services
 {
@@ -65,46 +67,99 @@ namespace app::services
     }
 
     std::future<utils::Result<std::vector<domain::MediaMetadata>>>
-    MediaService::UnifiedSearch(const std::string &query, int page)
+    MediaService::UnifiedSearch(const std::string &query, const MediaFilter &filter, int page)
     {
         return std::async(std::launch::async, [=]()
                           {
-        std::vector<std::future<utils::Result<std::vector<domain::MediaMetadata>>>> futures;
-        
-        {
-            std::lock_guard<std::mutex> lock(providerMutex_);
-            for(const auto& [id, provider] : providers_) {
-                futures.push_back(provider->SearchMedia(query, page));
+            std::vector<std::future<utils::Result<std::vector<domain::MediaMetadata>>>> futures;
+            std::vector<domain::MediaMetadata> aggregated;
+            
+            // Check cache first
+            auto cacheKey = fmt::format("search:{}:{}:{}", query, filter.ToString(), page);
+            if (auto cached = cache::CacheManager::Instance().Get<std::vector<domain::MediaMetadata>>(cacheKey)) {
+                return utils::Result<std::vector<domain::MediaMetadata>>(*cached);
             }
-        }
-
-        std::vector<domain::MediaMetadata> aggregated;
-        std::unordered_map<std::string, bool> seenIds;
-        
-        for(auto& future : futures) {
-            try {
-                auto result = future.get();
-                if(result.IsOk()) {
-                    for(const auto& item : result.Value()) {
-                        const std::string uniqueId = item.id.source + ":" + item.id.id;
-                        if(!seenIds[uniqueId]) {
-                            aggregated.push_back(item);
-                            seenIds[uniqueId] = true;
-                        }
+            
+            // Parallel provider search
+            {
+                std::lock_guard<std::mutex> lock(providerMutex_);
+                for (const auto& [id, provider] : providers_) {
+                    if (provider->GetCapabilities().supportsSearch) {
+                        futures.push_back(provider->SearchMedia(query, filter, page));
                     }
                 }
             }
-            catch(const std::exception& e) {
-                DWORD error = GetLastError();
-                utils::Logger::Error("Provider error: " + std::to_string(error));
+            
+            // Aggregate results
+            for (auto& future : futures) {
+                try {
+                    auto result = future.get();
+                    if (result.IsOk()) {
+                        for (auto resultItem : result.Value())
+                        { // Non-const copy for modification
+                            if (resultItem.rating)
+                            {
+                                resultItem.normalizedRating = services::RatingNormalizer::Instance()
+                                                                  .NormalizeRating(resultItem.id.source, static_cast<float>(resultItem.rating));
+                            }
+                            aggregated.push_back(std::move(resultItem)); // Move copy into aggregated
+                        }
+                    }
+                } catch (const std::exception& e) {
+                    utils::Logger::Error("Provider search failed: " + std::string(e.what()));
+                }
             }
-        }
-
-        // Sort by descending popularity
-        std::sort(aggregated.begin(), aggregated.end(),
-            [](const auto& a, const auto& b) { return a.popularity > b.popularity; });
-
-        return utils::Result<std::vector<domain::MediaMetadata>>(aggregated); });
+            
+            // Sort and cache results
+            std::sort(aggregated.begin(), aggregated.end(),
+                     [](const auto& a, const auto& b) { 
+                         return a.normalizedRating > b.normalizedRating; 
+                     });
+            
+            cache::CacheManager::Instance().Set(cacheKey, aggregated);
+            return utils::Result<std::vector<domain::MediaMetadata>>(aggregated); });
     }
+    // std::future<utils::Result<std::vector<domain::MediaMetadata>>>
+    // MediaService::UnifiedSearch(const std::string &query, int page)
+    // {
+    //     return std::async(std::launch::async, [=]()
+    //                       {
+    //     std::vector<std::future<utils::Result<std::vector<domain::MediaMetadata>>>> futures;
+
+    //     {
+    //         std::lock_guard<std::mutex> lock(providerMutex_);
+    //         for(const auto& [id, provider] : providers_) {
+    //             futures.push_back(provider->SearchMedia(query, page));
+    //         }
+    //     }
+
+    //     std::vector<domain::MediaMetadata> aggregated;
+    //     std::unordered_map<std::string, bool> seenIds;
+
+    //     for(auto& future : futures) {
+    //         try {
+    //             auto result = future.get();
+    //             if(result.IsOk()) {
+    //                 for(const auto& item : result.Value()) {
+    //                     const std::string uniqueId = item.id.source + ":" + item.id.id;
+    //                     if(!seenIds[uniqueId]) {
+    //                         aggregated.push_back(item);
+    //                         seenIds[uniqueId] = true;
+    //                     }
+    //                 }
+    //             }
+    //         }
+    //         catch(const std::exception& e) {
+    //             DWORD error = GetLastError();
+    //             utils::Logger::Error("Provider error: " + std::to_string(error));
+    //         }
+    //     }
+
+    //     // Sort by descending popularity
+    //     std::sort(aggregated.begin(), aggregated.end(),
+    //         [](const auto& a, const auto& b) { return a.popularity > b.popularity; });
+
+    //     return utils::Result<std::vector<domain::MediaMetadata>>(aggregated); });
+    // }
 
 } // namespace app::services

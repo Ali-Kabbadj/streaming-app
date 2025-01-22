@@ -10,6 +10,7 @@ add_library(core
     utils/win32_utils.cpp
     utils/result.hpp
     utils/http_client.hpp
+    utils/lru_cache.hpp
     ipc/ipc_manager.cpp
     ipc/ipc_manager.hpp
     ipc/ipc_types.hpp

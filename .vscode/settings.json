@@ -136,7 +136,8 @@
     "xtree": "cpp",
     "xutility": "cpp",
     "xstddef": "cpp",
-    "resumable": "cpp"
+    "resumable": "cpp",
+    "regex": "cpp"
   },
   "cmake.generator": "Visual Studio 17 2022",
   "cmake.preferredGenerators": ["Visual Studio 17 2022"],
