@@ -1,7 +1,52 @@
+// {
+//   "cmake.configureOnOpen": true,
+//   "cmake.buildDirectory": "${workspaceFolder}/build",
+//   "cmake.debugConfig": {
+//     "stopAtEntry": false,
+//     "MIMode": "gdb"
+//   },
+//   "cmake.generator": "Visual Studio 17 2022",
+//   "cmake.configureArgs": [
+//     "-DCMAKE_TOOLCHAIN_FILE=C:/Program Files/Microsoft Visual Studio/2022/Community/VC/vcpkg/scripts/buildsystems/vcpkg.cmake",
+//     "-DBUILD_TESTS=ON"
+//   ],
+//   "cmake.preferredGenerators": ["Visual Studio 17 2022"],
+//   "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
+//   "files.associations": {
+//     "*.json": "jsonc",
+//     "*.hpp": "cpp",
+//     "*.cpp": "cpp",
+//     "xstring": "cpp"
+//   },
+//   "editor.formatOnSave": true,
+//   "C_Cpp.formatting": "clangFormat",
+//   "[cpp]": {
+//     "editor.defaultFormatter": "ms-vscode.cpptools"
+//   }
+// }
 {
+  "cmake.configureOnOpen": true,
+  "cmake.buildDirectory": "${workspaceFolder}/build",
+  "cmake.installPrefix": "${workspaceFolder}/out/install/${presetName}",
+  "cmake.debugConfig": {
+    "stopAtEntry": false,
+    "MIMode": "gdb"
+  },
+  "cmake.configureArgs": [
+    "-DCMAKE_TOOLCHAIN_FILE=C:/Program Files/Microsoft Visual Studio/2022/Community/VC/vcpkg/scripts/buildsystems/vcpkg.cmake"
+  ],
+  "cmake.environment": {
+    "VCPKG_FEATURE_FLAGS": "manifests,versions"
+  },
+  "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
+  "C_Cpp.errorSquiggles": "enabled",
   "files.associations": {
     "*.json": "jsonc",
-    "future": "cpp",
-    "memory": "cpp"
-  }
+    "*.hpp": "cpp",
+    "*.cpp": "cpp"
+  },
+  "cmake.generator": "Visual Studio 17 2022",
+  "cmake.preferredGenerators": ["Visual Studio 17 2022"],
+  "editor.formatOnSave": true,
+  "editor.formatOnType": true
 }

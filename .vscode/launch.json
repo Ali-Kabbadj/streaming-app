@@ -1,0 +1,35 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug streaming app",
+      "type": "cppvsdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/bin/Debug/streaming_app.exe",
+      "args": [],
+      "stopAtEntry": false,
+      "cwd": "${workspaceFolder}/build/bin/Debug",
+      "environment": [],
+      "console": "internalConsole",
+      "logging": {
+        "moduleLoad": false,
+        "trace": true
+      },
+      "preLaunchTask": "Build",
+      "requireExactSource": false,
+      "visualizerFile": "${workspaceFolder}/.vscode/custom.natvis"
+    },
+    {
+      "name": "Run Tests",
+      "type": "cppvsdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/bin/Debug/tests.exe",
+      "args": [],
+      "stopAtEntry": false,
+      "cwd": "${workspaceFolder}/build/bin/Debug",
+      "environment": [],
+      "console": "internalConsole",
+      "preLaunchTask": "Build"
+    }
+  ]
+}
