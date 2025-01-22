@@ -72,7 +72,6 @@ find_package(GTest CONFIG REQUIRED)
 find_package(cpprestsdk CONFIG REQUIRED)
 find_package(unofficial-webview2 CONFIG REQUIRED)
 find_package(WIL CONFIG REQUIRED)
-find_package(date CONFIG REQUIRED)
 
 # Add subdirectories
 add_subdirectory(src)

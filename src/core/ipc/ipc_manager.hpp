@@ -34,7 +34,6 @@ namespace app::ipc
         void RegisterHandler(const std::string &type, IpcHandlerCallback handler);
         void RegisterNavigationHandler();
         void ValidateAndProcessNavigation(const NavigationRequest &request);
-        void RegisterMediaHandlers();
 
     private:
         WebMessageCallback webviewCallback_;

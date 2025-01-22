@@ -2,6 +2,7 @@
 #include <string>
 #include <curl/curl.h>
 #include <stdexcept>
+
 namespace app::utils
 {
 
@@ -26,6 +27,28 @@ namespace app::utils
             }
 
             return response;
+        }
+
+        static std::string EscapeUrl(const std::string &url)
+        {
+            CURL *curl = curl_easy_init();
+            if (!curl)
+            {
+                throw std::runtime_error("Failed to initialize CURL");
+            }
+
+            char *encoded = curl_easy_escape(curl, url.c_str(), url.length());
+            if (!encoded)
+            {
+                curl_easy_cleanup(curl);
+                throw std::runtime_error("Failed to encode URL");
+            }
+
+            std::string result(encoded);
+            curl_free(encoded);
+            curl_easy_cleanup(curl);
+
+            return result;
         }
 
     private:

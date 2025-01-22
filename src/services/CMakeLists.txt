@@ -1,9 +1,11 @@
 add_library(services
     media/media_service.hpp
     media/media_service.cpp
-    providers/omdbMediaProvider.hpp
+    media/IMediaProvider.hpp
     providers/omdbMediaProvider.cpp
+    providers/omdbMediaProvider.hpp
     providers/tmdb_provider.hpp
+    providers/tmdb_provider.cpp
 )
 
 target_link_libraries(services

@@ -3,7 +3,6 @@
 #include <vector>
 #include <chrono>
 #include <optional>
-#include <date/date.h>
 
 namespace app::domain
 {
@@ -73,14 +72,6 @@ namespace app::domain
         float minRating;
     };
 
-    struct MediaDetails : MediaMetadata
-    {
-        std::vector<RatingSource> ratings;
-        std::vector<Review> reviews;
-        std::vector<std::string> availableProviders;
-        std::vector<EpisodeInfo> episodes; // For TV shows
-    };
-
     struct RatingSource
     {
         std::string source; // "IMDb", "RottenTomatoes"
@@ -93,8 +84,16 @@ namespace app::domain
         std::string author;
         std::string content;
         std::string source;
-        date::year_month_day date;
+        // date::year_month_day date;
         // date::time_of_day time;
+    };
+
+    struct MediaDetails : MediaMetadata
+    {
+        std::vector<RatingSource> ratings;
+        std::vector<Review> reviews;
+        std::vector<std::string> availableProviders;
+        std::vector<EpisodeInfo> episodes; // For TV shows
     };
 
 } // namespace app::domain

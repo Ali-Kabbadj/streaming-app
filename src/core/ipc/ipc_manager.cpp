@@ -1,6 +1,5 @@
 #include "ipc_manager.hpp"
 #include "utils/logger.hpp"
-#include "services/media/media_service.hpp"
 
 namespace app::ipc
 {
@@ -172,31 +171,6 @@ namespace app::ipc
             throw std::invalid_argument("Invalid route format");
         }
         // Process navigation...
-    }
-
-    void IpcManager::RegisterMediaHandlers()
-    {
-        // Search handler
-        RegisterHandler("media/search", [this](const json &payload, auto respond)
-                        {
-        std::string query = payload["query"];
-        int page = payload.value("page", 1);
-        
-        services::MediaService::Instance().UnifiedSearch(query, page)
-            .then([respond](auto future) {
-                try {
-                    auto result = future.get();
-                    respond(json{{"success", true}, {"results", result.Value()}});
-                } catch (const std::exception& e) {
-                    respond(json{{"success", false}, {"error", e.what()}});
-                }
-            }); });
-
-        // Filter handler
-        RegisterHandler("media/filter", [this](const json &payload, auto respond)
-                        {
-                            // Implement filtering logic similar to search
-                        });
     }
 
 } // namespace app::ipc
