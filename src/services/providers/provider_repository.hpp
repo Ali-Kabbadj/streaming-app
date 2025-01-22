@@ -1,19 +1,32 @@
 #pragma once
 #include <string>
 #include <vector>
-#include <memory>
-#include <chrono>
 #include <optional>
-#include "core/utils/lru_cache.hpp"
+#include <unordered_map>
+#include <nlohmann/json.hpp>
+#include "../media/media_service.hpp" // Add this line
+// Remove #include "GenericProvider.hpp"
 
 namespace app::services
 {
 
     struct AuthConfig
     {
-        std::string type; // "oauth2", "apikey"
-        std::string authEndpoint;
-        std::vector<std::string> scopes;
+        std::string type;      // "apikey", "oauth2"
+        std::string key_param; // e.g., "api_key"
+    };
+
+    struct SearchConfig
+    {
+        std::string path;
+        std::unordered_map<std::string, std::string> query_params;
+        std::unordered_map<std::string, std::string> response_mapping;
+    };
+    struct CatalogConfig
+    {
+        std::string path;
+        std::unordered_map<std::string, std::string> query_params;
+        std::optional<std::unordered_map<std::string, std::string>> response_mapping; // Optional
     };
 
     struct ProviderManifest
@@ -21,32 +34,38 @@ namespace app::services
         std::string id;
         std::string version;
         std::string name;
-        std::string description;
         std::string endpoint;
-        std::vector<std::string> types;
-        std::vector<std::string> genres;
-        std::vector<std::string> sortOptions;
+        std::optional<AuthConfig> auth;
         struct
         {
             bool search;
             bool catalog;
         } capabilities;
-        std::optional<AuthConfig> auth;
+        SearchConfig search;
+        std::unordered_map<std::string, CatalogConfig> catalogs; // Map of catalogs
+        std::vector<std::string> types;
+        std::vector<std::string> genres;
+        std::vector<std::string> sortOptions;
     };
+
+    // Declare the functions in the header file
+    void from_json(const nlohmann::json &j, AuthConfig &auth);
+    void from_json(const nlohmann::json &j, SearchConfig &search);
+    void from_json(const nlohmann::json &j, CatalogConfig &catalog);
+    void from_json(const nlohmann::json &j, ProviderManifest &manifest);
 
     class ProviderRepository
     {
     public:
         static ProviderRepository &Instance();
 
-        std::vector<ProviderManifest> DiscoverProviders(const std::string &repositoryUrl);
-        bool InstallProvider(const ProviderManifest &manifest);
-        bool UninstallProvider(const std::string &providerId);
-        std::vector<ProviderManifest> GetInstalledProviders() const;
+        void LoadProvidersFromManifests(const std::string &providersDir);
+        bool ValidateManifest(const ProviderManifest &manifest);
+        std::string GetApiKeyForProvider(const std::string &providersDir, const std::string &providerId);
 
     private:
-        std::unordered_map<std::string, ProviderManifest> installedProviders_;
-        std::string localStoragePath_;
-        bool ValidateManifest(const ProviderManifest &manifest);
+        std::unordered_map<std::string, std::unique_ptr<IMediaProvider>> providers_;
+        std::mutex providerMutex_;
     };
-}
+
+} // namespace app::services

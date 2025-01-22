@@ -37,7 +37,9 @@ namespace app::utils
                 throw std::runtime_error("Failed to initialize CURL");
             }
 
-            char *encoded = curl_easy_escape(curl, url.c_str(), url.length());
+            // char *encoded = curl_easy_escape(curl, url.c_str(), url.length());
+            char *encoded = curl_easy_escape(curl, url.c_str(), static_cast<int>(url.length()));
+
             if (!encoded)
             {
                 curl_easy_cleanup(curl);

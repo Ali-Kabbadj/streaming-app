@@ -37,6 +37,16 @@ namespace app::utils
             return std::get<T>(data_);
         }
 
+        // Add this non-const overload
+        T &Value() &
+        {
+            if (IsError())
+            {
+                throw std::runtime_error(std::get<Error>(data_).message);
+            }
+            return std::get<T>(data_);
+        }
+
         T &&Value() &&
         {
             if (IsError())

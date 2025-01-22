@@ -1,3 +1,5 @@
+
+
 #pragma once
 #include "domain/models/media_types.hpp"
 #include "core/utils/result.hpp"
@@ -10,7 +12,6 @@
 
 namespace app::services
 {
-
     class IMediaProvider;
 
     class MediaService
@@ -19,9 +20,8 @@ namespace app::services
         static MediaService &Instance();
 
         // Lifecycle management
-        bool Initialize();
         void Shutdown();
-        bool IsInitialized() const { return initialized_; }
+        bool Initialize(const std::string &providersDir);
 
         // Provider management
         void RegisterProvider(const std::string &providerId, std::unique_ptr<IMediaProvider> provider);
@@ -30,18 +30,13 @@ namespace app::services
 
         // Core functionality
         std::future<utils::Result<std::vector<domain::MediaMetadata>>>
-        UnifiedSearch(const std::string &query, const MediaFilter &filter, int page);
-        std::unordered_map<std::string, std::unique_ptr<IMediaProvider>> providers_;
-        std::mutex providerMutex_;
+        UnifiedSearch(const std::string &query, const std::string &catalogType, const MediaFilter &filter, int page);
 
     private:
         MediaService() = default;
 
         bool initialized_ = false;
-
-        std::string activeProviderId_;
-
-        void LoadDefaultProviders();
+        std::unordered_map<std::string, std::unique_ptr<IMediaProvider>> providers_;
+        std::mutex providerMutex_;
     };
-
 } // namespace app::services

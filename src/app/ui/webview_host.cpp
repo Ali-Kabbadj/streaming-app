@@ -17,14 +17,72 @@ namespace app::ui
 
     WebViewHost::~WebViewHost() = default;
 
+    // void WebViewHost::Initialize()
+    // {
+    //     utils::Logger::Info("Initializing WebView2...");
+
+    //     auto options = Microsoft::WRL::Make<CoreWebView2EnvironmentOptions>();
+
+    //     CreateCoreWebView2EnvironmentWithOptions(
+    //         nullptr, nullptr, options.Get(),
+    //         Microsoft::WRL::Callback<ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler>(
+    //             [this](HRESULT result, ICoreWebView2Environment *env) -> HRESULT
+    //             {
+    //                 if (FAILED(result))
+    //                 {
+    //                     utils::Logger::Error("Failed to create WebView2 environment");
+    //                     return result;
+    //                 }
+
+    //                 env->CreateCoreWebView2Controller(
+    //                     parentWindow_,
+    //                     Microsoft::WRL::Callback<ICoreWebView2CreateCoreWebView2ControllerCompletedHandler>(
+    //                         [this](HRESULT result, ICoreWebView2Controller *controller) -> HRESULT
+    //                         {
+    //                             if (FAILED(result))
+    //                             {
+    //                                 utils::Logger::Error("Failed to create WebView2 controller");
+    //                                 return result;
+    //                             }
+
+    //                             controller_ = controller;
+    //                             controller_->get_CoreWebView2(&webview_);
+
+    //                             SetupWebMessageHandler();
+
+    //                             RECT bounds;
+    //                             GetClientRect(parentWindow_, &bounds);
+    //                             controller_->put_Bounds(bounds);
+
+    //                             if (initCallback_)
+    //                             {
+    //                                 initCallback_(true);
+    //                             }
+
+    //                             return S_OK;
+    //                         })
+    //                         .Get());
+    //                 return S_OK;
+    //             })
+    //             .Get());
+    // }
+
     void WebViewHost::Initialize()
     {
         utils::Logger::Info("Initializing WebView2...");
 
+        // Get the AppData directory for WebView2 user data
+        std::string appDataDir = utils::GetAppDataDirectory("StreamingApp");
+        std::wstring userDataFolder = utils::Utf8ToWide(appDataDir + "/WebView2");
+
+        // Create WebView2 environment options
         auto options = Microsoft::WRL::Make<CoreWebView2EnvironmentOptions>();
 
+        // Create the WebView2 environment with the user data folder
         CreateCoreWebView2EnvironmentWithOptions(
-            nullptr, nullptr, options.Get(),
+            nullptr,                // Use the default browser installation
+            userDataFolder.c_str(), // User data folder
+            options.Get(),
             Microsoft::WRL::Callback<ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler>(
                 [this](HRESULT result, ICoreWebView2Environment *env) -> HRESULT
                 {

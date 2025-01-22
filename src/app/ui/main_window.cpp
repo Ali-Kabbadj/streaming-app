@@ -35,10 +35,15 @@ namespace app::ui
                 webview_->PostWebMessage(message);
             });
 
-            auto &config = config::ConfigManager::Instance();
-            config.Set("webview.url", "http://localhost:3000");
-            auto url = config.Get<std::string>("webview.url").Value();
-            webview_->Navigate(utils::Utf8ToWide(url));
+            // Get WebView URL from config
+            auto urlResult = app::config::ConfigManager::Instance().Get<std::string>("webview.url");
+            if (urlResult.IsError())
+            {
+                utils::Logger::Error("Failed to get WebView URL: " + urlResult.GetError().message);
+                return;
+            }
+
+            webview_->Navigate(utils::Utf8ToWide(urlResult.Value()));
             utils::Logger::Info("WebView initialized successfully.");
         } else {
             utils::Logger::Error("WebView initialization failed.");
@@ -49,16 +54,33 @@ namespace app::ui
 
     bool MainWindow::Initialize(HINSTANCE hInstance, int nCmdShow)
     {
-        if (!WindowBase::Initialize(hInstance, nCmdShow))
+        // Load configuration from the AppData directory
+        auto configLoadResult = app::config::ConfigManager::Instance().LoadFromAppData("StreamingApp");
+        if (configLoadResult.IsError())
+        {
+            utils::Logger::Error("Failed to load config: " + configLoadResult.GetError().message);
             return false;
+        }
 
-        // Initialize MediaService once
-        if (!services::MediaService::Instance().Initialize())
+        // Initialize MediaService with the providers directory
+        auto providersDirResult = app::config::ConfigManager::Instance().Get<std::string>("providers_dir");
+        if (providersDirResult.IsError())
+        {
+            utils::Logger::Error("Failed to get providers directory: " + providersDirResult.GetError().message);
+            return false;
+        }
+
+        if (!services::MediaService::Instance().Initialize(providersDirResult.Value()))
         {
             utils::Logger::Error("Failed to initialize MediaService");
             return false;
         }
 
+        // Initialize the window
+        if (!WindowBase::Initialize(hInstance, nCmdShow))
+            return false;
+
+        // Initialize WebView
         InitializeWebView();
         return true;
     }
@@ -67,85 +89,84 @@ namespace app::ui
     {
         utils::Logger::Info("Setting up IPC handlers...");
 
-        ipcManager_->RegisterHandler("movies", [](const ipc::json &payload, auto respond)
+        ipcManager_->RegisterHandler("movies", [](const ipc::json &payload, std::function<void(const ipc::json &)> respond)
                                      {
-        try {
-            utils::Logger::Info("Processing 'movies' IPC request.");
-            
-            // Create a MediaFilter object
-            services::MediaFilter filter;
-            filter.sortBy = "popularity"; // Default sort by popularity
-            filter.sortDesc = true;       // Sort in descending order
+            try {
+                utils::Logger::Info("Processing 'movies' IPC request.");
 
-            // Fetch movies from MediaService (page 1)
-            auto& mediaService = services::MediaService::Instance();
-            auto resultFuture = mediaService.UnifiedSearch("", filter, 1); // Empty query for popular movies
+                // Create a MediaFilter object
+                services::MediaFilter filter;
+                filter.sortBy = "popularity"; // Default sort by popularity
+                filter.sortDesc = true;       // Sort in descending order
 
-            auto result = resultFuture.get();
+                // Fetch movies from MediaService (page 1)
+                auto& mediaService = services::MediaService::Instance();
+                auto resultFuture = mediaService.UnifiedSearch("", "popular", filter, 1); // Add "popular" as catalogType
 
-            if (result.IsOk()) {
-                ipc::json movieArray = ipc::json::array();
+                auto result = resultFuture.get();
 
-                // Combine results from both pages
-                std::vector<domain::MediaMetadata> allMovies = result.Value();
+                if (result.IsOk()) {
+                    ipc::json movieArray = ipc::json::array();
 
-                for (const auto& movie : allMovies) {
+                    // Combine results from both pages
+                    std::vector<domain::MediaMetadata> allMovies = result.Value();
 
-                    try {
-                        // Safely extract values
-                        const std::string& safeTitle = !movie.title.empty() ? 
-                            movie.title : "Untitled";
-                        const std::string& safeOverview = !movie.overview.empty() ? 
-                            movie.overview : "No overview available";
-                        const std::string& safeId = fmt::format("{}:{}", 
-                            movie.id.source, movie.id.id);
+                    for (const auto& movie : allMovies) {
+                        try {
+                            // Safely extract values
+                            const std::string& safeTitle = !movie.title.empty() ? 
+                                movie.title : "Untitled";
+                            const std::string& safeOverview = !movie.overview.empty() ? 
+                                movie.overview : "No overview available";
+                            const std::string& safeId = fmt::format("{}:{}", 
+                                movie.id.source, movie.id.id);
 
-                        // Build movie JSON
-                        ipc::json movieJson = {
-                            {"title", safeTitle},
-                            {"overview", safeOverview},
-                            {"rating", movie.rating},
-                            {"voteCount", movie.voteCount},
-                            {"id", safeId}
-                        };
+                            // Build movie JSON
+                            ipc::json movieJson = {
+                                {"title", safeTitle},
+                                {"overview", safeOverview},
+                                {"rating", movie.rating},
+                                {"voteCount", movie.voteCount},
+                                {"id", safeId}
+                            };
 
-                        // Handle optional poster path
-                        if (movie.posterPath.has_value() && !movie.posterPath->empty()) {
-                            movieJson["poster"] = *movie.posterPath;
-                        } else {
-                            movieJson["poster"] = nullptr;
+                            // Handle optional poster path
+                            if (movie.posterPath.has_value() && !movie.posterPath->empty()) {
+                                movieJson["poster"] = *movie.posterPath;
+                            } else {
+                                movieJson["poster"] = nullptr;
+                            }
+
+                            movieArray.push_back(movieJson);
+                            utils::Logger::Info(fmt::format("Processed: {}", safeTitle));
                         }
+                        catch (const std::exception& ex) {
+                            utils::Logger::Error(fmt::format("Movie processing error: {}", ex.what()));
+                            continue; // Skip invalid entries
+                        }
+                    }
 
-                        movieArray.push_back(movieJson);
-                        utils::Logger::Info(fmt::format("Processed: {}", safeTitle));
-                    }
-                    catch (const std::exception& ex) {
-                        utils::Logger::Error(fmt::format("Movie processing error: {}", ex.what()));
-                        continue; // Skip invalid entries
-                    }
+                    // Send response
+                    ipc::json response = {
+                        {"success", true},
+                        {"movies", movieArray}
+                    };
+                    respond(response);
+                    utils::Logger::Info(fmt::format("Sent {} movies", movieArray.size()));
                 }
+                else {
+                    // Handle errors
+                    std::string errorMsg;
+                    if (!result.IsOk()) errorMsg = result.GetError().message;
 
-                // Send response
-                ipc::json response = {
-                    {"success", true},
-                    {"movies", movieArray}
-                };
-                respond(response);
-                utils::Logger::Info(fmt::format("Sent {} movies", movieArray.size()));
+                    utils::Logger::Error(fmt::format("Failed to fetch movies: {}", errorMsg));
+                    respond({{"success", false}, {"error", errorMsg}});
+                }
             }
-            else {
-                // Handle errors
-                std::string errorMsg;
-                if (!result.IsOk()) errorMsg = result.GetError().message;
-                
-                utils::Logger::Error(fmt::format("Failed to fetch movies: {}", errorMsg));
-                respond({{"success", false}, {"error", errorMsg}});
-            }
-        }
-        catch (const std::exception& ex) {
-            utils::Logger::Error(fmt::format("IPC handler failed: {}", ex.what()));
-            respond({{"success", false}, {"error", ex.what()}});
-        } });
+            catch (const std::exception& ex) {
+                utils::Logger::Error(fmt::format("IPC handler failed: {}", ex.what()));
+                respond({{"success", false}, {"error", ex.what()}});
+            } });
     }
 
     std::wstring MainWindow::GetWindowTitle() const

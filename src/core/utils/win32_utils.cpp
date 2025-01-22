@@ -77,26 +77,30 @@ namespace app::utils
         return strTo;
     }
 
-    // std::wstring Utf8ToWide(const std::string &str)
-    // {
-    //     if (str.empty())
-    //     {
-    //         return std::wstring();
-    //     }
+    std::string GetAppDataDirectory(const std::string &appName)
+    {
+        // Get the Local AppData path
+        char *appDataPath = nullptr;
+        size_t len = 0;
+        _dupenv_s(&appDataPath, &len, "LOCALAPPDATA");
 
-    //     // Calculate the required buffer size for the wide string
-    //     int size_needed = MultiByteToWideChar(CP_UTF8, 0, str.c_str(), (int)str.size(),
-    //                                           nullptr, 0);
+        if (!appDataPath)
+        {
+            throw std::runtime_error("Failed to get AppData directory");
+        }
 
-    //     // Create a wide string buffer
-    //     std::wstring wstr(size_needed, 0);
+        // Construct the full path (e.g., C:\Users\<Username>\AppData\Local\<AppName>\)
+        std::filesystem::path appDataDir(appDataPath);
+        appDataDir /= appName;
 
-    //     // Perform the conversion
-    //     MultiByteToWideChar(CP_UTF8, 0, str.c_str(), (int)str.size(),
-    //                         &wstr[0], size_needed);
+        // Create the directory if it doesn't exist
+        std::filesystem::create_directories(appDataDir);
 
-    //     return wstr;
-    // }
+        // Free the allocated memory
+        free(appDataPath);
+
+        return appDataDir.string();
+    }
 
     std::wstring Utf8ToWide(const std::string &utf8Str)
     {

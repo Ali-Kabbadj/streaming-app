@@ -1,17 +1,17 @@
-add_library(services
+add_library(services   
+cache/cache_manager.hpp
+    cache/cache_manager.cpp
+    cache/cache_manager.hpp
+
     media/media_service.hpp
     media/media_service.cpp
     media/IMediaProvider.hpp
-    providers/omdbMediaProvider.cpp
-    providers/omdbMediaProvider.hpp
-    providers/tmdb_provider.hpp
-    providers/tmdb_provider.cpp
+
+    providers/GenericProvider.cpp
+    providers/GenericProvider.hpp
     providers/provider_repository.cpp
     providers/provider_repository.hpp
-    providers/utils/rating_normalizer.hpp
-    providers/utils/rating_normalizer.cpp
-    cache/cache_manager.hpp
-    cache/cache_manager.cpp
+ 
     # auth/auth_manager.hpp
 )
 

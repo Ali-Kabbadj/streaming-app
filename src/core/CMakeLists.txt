@@ -11,10 +11,14 @@ add_library(core
     utils/result.hpp
     utils/http_client.hpp
     utils/lru_cache.hpp
+    utils/rating_normalizer.cpp
+    utils/rating_normalizer.hpp
     ipc/ipc_manager.cpp
     ipc/ipc_manager.hpp
     ipc/ipc_types.hpp
     events/event_system.hpp
+    config/config_manager.hpp
+    config/config_manager.cpp
 )
 
 target_include_directories(core

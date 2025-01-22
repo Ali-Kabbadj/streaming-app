@@ -1,6 +1,7 @@
 #include "window_base.hpp"
 #include "utils/logger.hpp"
 #include "utils/win32_utils.hpp"
+#include "core/config/config_manager.hpp"
 
 namespace app::ui
 {
@@ -142,10 +143,57 @@ namespace app::ui
         return true;
     }
 
+    // bool WindowBase::CreateWindowInstance()
+    // {
+    //     auto threadId = GetCurrentThreadId();
+    //     utils::Logger::Info("Creating window in thread: " + std::to_string(threadId));
+
+    //     DWORD style = GetWindowStyle();
+    //     DWORD exStyle = GetWindowExStyle();
+
+    //     // Store strings to ensure they remain valid
+    //     std::wstring className = GetWindowClassName();
+    //     std::wstring titleName = GetWindowTitle();
+
+    //     // Create the window without passing 'this' initially
+    //     hwnd_ = CreateWindowExW(
+    //         exStyle,           // Extended window style
+    //         className.c_str(), // Window class name
+    //         titleName.c_str(), // Window title
+    //         style,             // Window style
+    //         CW_USEDEFAULT,     // Initial x position
+    //         CW_USEDEFAULT,     // Initial y position
+    //         1280,              // Initial width
+    //         720,               // Initial height
+    //         nullptr,           // Parent window handle
+    //         nullptr,           // Menu handle
+    //         hInstance_,        // Instance handle
+    //         nullptr);          // Additional application data
+
+    //     if (!hwnd_)
+    //     {
+    //         DWORD error = GetLastError();
+    //         utils::Logger::Error("CreateWindowExW failed with error: " + std::to_string(error));
+    //         return false;
+    //     }
+
+    //     // Store the this pointer after window creation
+    //     SetWindowLongPtr(hwnd_, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(this));
+
+    //     utils::Logger::Info("Window created successfully with handle: " + std::to_string((uint64_t)hwnd_));
+    //     return true;
+    // }
+
     bool WindowBase::CreateWindowInstance()
     {
         auto threadId = GetCurrentThreadId();
         utils::Logger::Info("Creating window in thread: " + std::to_string(threadId));
+
+        // Get window dimensions from config
+        auto widthResult = app::config::ConfigManager::Instance().Get<int>("window.width");
+        auto heightResult = app::config::ConfigManager::Instance().Get<int>("window.height");
+        int width = widthResult.IsOk() ? widthResult.Value() : 1280;   // Default to 1280 if not found
+        int height = heightResult.IsOk() ? heightResult.Value() : 720; // Default to 720 if not found
 
         DWORD style = GetWindowStyle();
         DWORD exStyle = GetWindowExStyle();
@@ -162,8 +210,8 @@ namespace app::ui
             style,             // Window style
             CW_USEDEFAULT,     // Initial x position
             CW_USEDEFAULT,     // Initial y position
-            1280,              // Initial width
-            720,               // Initial height
+            width,             // Initial width
+            height,            // Initial height
             nullptr,           // Parent window handle
             nullptr,           // Menu handle
             hInstance_,        // Instance handle
