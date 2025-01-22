@@ -2,6 +2,7 @@
 #include "services/providers/OmdbMediaProvider.hpp"
 #include "services/providers/tmdb_provider.hpp"
 #include "core/utils/logger.hpp"
+#include <fmt/format.h>
 
 namespace app::services
 {
@@ -16,18 +17,26 @@ namespace app::services
     {
         std::lock_guard<std::mutex> lock(providerMutex_);
 
+        if (initialized_)
+        { // 🛑 Prevent re-initialization
+            return true;
+        }
+
         try
         {
             utils::Logger::Info("Initializing MediaService...");
             LoadDefaultProviders();
             initialized_ = true;
-            utils::Logger::Info("MediaService initialized with {} providers");
+            std::string msg = fmt::format("MediaService initialized with {} providers", providers_.size());
+            utils::Logger::Info(msg);
+
             return true;
         }
         catch (const std::exception &e)
         {
-            DWORD error = GetLastError();
-            utils::Logger::Error("CreateWindowExW failed with error: " + std::to_string(error));
+            // Log the actual exception, not a Win32 error
+            std::string errorMsg = fmt::format("MediaService initialization failed: {}", e.what());
+            utils::Logger::Error(errorMsg);
             return false;
         }
     }
@@ -43,16 +52,16 @@ namespace app::services
     void MediaService::RegisterProvider(const std::string &providerId,
                                         std::unique_ptr<IMediaProvider> provider)
     {
-        std::lock_guard<std::mutex> lock(providerMutex_);
+        // std::lock_guard<std::mutex> lock(providerMutex_);
         providers_[providerId] = std::move(provider);
-        utils::Logger::Info("Registered provider: {}");
+        utils::Logger::Info(fmt::format("Registered provider: {}", providerId));
     }
 
     void MediaService::LoadDefaultProviders()
     {
         // Add your API keys here
-        RegisterProvider("tmdb", std::make_unique<TmdbProvider>("your_tmdb_key"));
-        RegisterProvider("omdb", std::make_unique<OmdbMediaProvider>("your_omdb_key"));
+        RegisterProvider("tmdb", std::make_unique<TmdbProvider>("c9babff33d8b3805280b20c04b111497"));
+        RegisterProvider("omdb", std::make_unique<OmdbMediaProvider>("b4e6b940"));
     }
 
     std::future<utils::Result<std::vector<domain::MediaMetadata>>>

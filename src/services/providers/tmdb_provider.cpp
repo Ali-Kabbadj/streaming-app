@@ -71,11 +71,7 @@ namespace app::services
 
     std::string TmdbProvider::BuildUrl(const std::string &query, int page) const
     {
-        return fmt::format(
-            "https://api.themoviedb.org/3/search/multi?api_key={}&query={}&page={}",
-            apiKey_,
-            utils::HttpClient::EscapeUrl(query),
-            page);
+        return fmt::format("https://api.themoviedb.org/3/discover/movie?api_key={}&include_adult=false&include_video=false&language=en-US&page=1&sort_by=popularity.desc", apiKey_);
     }
 
     std::future<utils::Result<domain::MediaMetadata>>

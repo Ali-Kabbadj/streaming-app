@@ -18,6 +18,7 @@ target_link_libraries(app_ui
         services
         unofficial::webview2::webview2
         WIL::WIL
+        fmt::fmt
 )
 
 add_executable(streaming_app WIN32

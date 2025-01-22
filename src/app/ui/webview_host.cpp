@@ -88,14 +88,6 @@ namespace app::ui
         }
     }
 
-    // void WebViewHost::PostWebMessage(const std::wstring &message)
-    // {
-    //     if (webview_)
-    //     {
-    //         webview_->PostWebMessageAsJson(message.c_str());
-    //     }
-    // }
-
     void WebViewHost::PostWebMessage(const std::wstring &message)
     {
         if (!webview_)
@@ -174,7 +166,6 @@ namespace app::ui
         HRESULT hr = webview_->Navigate(url.c_str());
         if (FAILED(hr))
         {
-            // utils::Logger::Error("Navigation failed with HRESULT: {}", hr);
             currentNavigation_->state = NavigationState::Error;
             return;
         }

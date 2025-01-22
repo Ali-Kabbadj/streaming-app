@@ -1,0 +1,13 @@
+[
+  {
+    "type": "tmdb",
+    "enabled": true,
+    "api_key": "YOUR_API_KEY",
+    "priority": 1
+  },
+  {
+    "type": "imdb",
+    "enabled": true,
+    "priority": 2
+  }
+]

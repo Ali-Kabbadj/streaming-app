@@ -24,22 +24,6 @@ namespace app::services
         // Media details
         virtual std::future<utils::Result<domain::MediaMetadata>>
         GetMediaDetails(const domain::MediaId &id) = 0;
-
-        // // Optional: Get available genres
-        // virtual std::future<utils::Result<std::vector<std::string>>>
-        // GetAvailableGenres()
-        // {
-        //     return std::async(std::launch::async, []()
-        //                       { return utils::Result<std::vector<std::string>>::Error("Not implemented"); });
-        // }
-
-        // // Optional: Get provider configuration
-        // virtual std::future<utils::Result<nlohmann::json>>
-        // GetConfiguration()
-        // {
-        //     return std::async(std::launch::async, []()
-        //                       { return utils::Result<nlohmann::json>::Error("Not implemented"); });
-        // }
     };
 
 } // namespace app::services

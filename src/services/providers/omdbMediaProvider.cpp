@@ -81,7 +81,7 @@ namespace app::services
         return fmt::format(
             "http://www.omdbapi.com/?apikey={}&s={}&page={}&type=movie",
             apiKey_,
-            utils::HttpClient::EscapeUrl(query), // Use EscapeUrl here
+            utils::HttpClient::EscapeUrl(query),
             page);
     }
 

@@ -31,13 +31,13 @@ namespace app::services
         // Core functionality
         std::future<utils::Result<std::vector<domain::MediaMetadata>>>
         UnifiedSearch(const std::string &query, int page = 1);
+        std::unordered_map<std::string, std::unique_ptr<IMediaProvider>> providers_;
 
     private:
         MediaService() = default;
 
         bool initialized_ = false;
         std::mutex providerMutex_;
-        std::unordered_map<std::string, std::unique_ptr<IMediaProvider>> providers_;
         std::string activeProviderId_;
 
         void LoadDefaultProviders();
