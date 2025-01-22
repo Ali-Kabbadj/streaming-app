@@ -8,7 +8,9 @@
     "spdlog",
     "fmt",
     "gtest",
-    "cpprestsdk"
+    "cpprestsdk",
+    "curl",
+    "date"
   ],
   "builtin-baseline": "cf035d9916a0a23042b41fcae7ee0386d245af08"
 }

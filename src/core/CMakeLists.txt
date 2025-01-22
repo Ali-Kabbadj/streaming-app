@@ -8,6 +8,7 @@ add_library(core
     utils/result.hpp
     utils/win32_utils.hpp
     utils/win32_utils.cpp
+    utils/result.hpp
     ipc/ipc_manager.cpp
     ipc/ipc_manager.hpp
     ipc/ipc_types.hpp
@@ -22,6 +23,7 @@ target_include_directories(core
 
 target_link_libraries(core
     PUBLIC
+        services
         nlohmann_json::nlohmann_json
         spdlog::spdlog
 )

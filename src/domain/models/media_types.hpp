@@ -3,6 +3,7 @@
 #include <vector>
 #include <chrono>
 #include <optional>
+#include <date/date.h>
 
 namespace app::domain
 {
@@ -18,11 +19,12 @@ namespace app::domain
     {
         std::string id;
         MediaType type;
-        std::string source; // e.g., "tmdb", "imdb", etc.
+        std::string source;      // "tmdb", "imdb", etc.
+        std::string original_id; // Original ID from source
     };
-
     struct MediaMetadata
     {
+        MediaId id;
         std::string title;
         std::optional<std::string> originalTitle;
         std::string overview;
@@ -32,6 +34,7 @@ namespace app::domain
         int voteCount;
         std::optional<std::string> posterPath;
         std::optional<std::string> backdropPath;
+        float popularity = 0.0f;
     };
 
     struct MovieInfo : MediaMetadata
@@ -58,6 +61,40 @@ namespace app::domain
         int numberOfEpisodes;
         std::string status; // "Continuing", "Ended", etc.
         std::vector<EpisodeInfo> episodes;
+        std::string imdbId;
+    };
+
+    struct MediaFilter
+    {
+        MediaType type;
+        std::vector<std::string> genres;
+        int minYear;
+        int maxYear;
+        float minRating;
+    };
+
+    struct MediaDetails : MediaMetadata
+    {
+        std::vector<RatingSource> ratings;
+        std::vector<Review> reviews;
+        std::vector<std::string> availableProviders;
+        std::vector<EpisodeInfo> episodes; // For TV shows
+    };
+
+    struct RatingSource
+    {
+        std::string source; // "IMDb", "RottenTomatoes"
+        float value;
+        std::string url;
+    };
+
+    struct Review
+    {
+        std::string author;
+        std::string content;
+        std::string source;
+        date::year_month_day date;
+        // date::time_of_day time;
     };
 
 } // namespace app::domain

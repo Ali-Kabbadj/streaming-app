@@ -4,7 +4,7 @@ namespace app::error
     {
     public:
         template <typename T>
-        static Result<T> Handle(std::function<T()> operation)
+        static utils::Result<T> Handle(std::function<T()> operation)
         {
             try
             {

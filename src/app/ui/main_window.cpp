@@ -1,5 +1,7 @@
 #include "main_window.hpp"
 #include "utils/logger.hpp"
+#include "config/config_manager.hpp"
+#include "services/media/media_service.hpp"
 
 namespace app::ui
 {
@@ -10,74 +12,132 @@ namespace app::ui
 
     MainWindow::~MainWindow() = default;
 
+    void MainWindow::InitializeWebView()
+    {
+        webview_ = std::make_unique<WebViewHost>(hwnd_);
+
+        webview_->SetInitCallback([this](bool success)
+                                  {
+        if (success) {
+            // Set up IPC handlers first
+            SetupIpcHandlers();
+            
+            // Connect WebView message handling to IPC manager
+            webview_->SetMessageCallback([this](const std::wstring& message) {
+                utils::Logger::Info("Forwarding message to IPC manager");
+                ipcManager_->HandleWebMessage(message);
+            });
+            
+            // Set up WebView callback in IPC manager
+            ipcManager_->SetWebViewCallback([this](const std::wstring& message) {
+                utils::Logger::Info("IPC manager sending response");
+                webview_->PostWebMessage(message);
+            });
+
+            auto &config = config::ConfigManager::Instance();
+            config.Set("webview.url", "http://localhost:3000");
+            auto url = config.Get<std::string>("webview.url").Value();
+            webview_->Navigate(utils::Utf8ToWide(url));
+            utils::Logger::Info("WebView initialized successfully.");
+        } else {
+            utils::Logger::Error("WebView initialization failed.");
+        } });
+
+        webview_->Initialize();
+    }
+
     bool MainWindow::Initialize(HINSTANCE hInstance, int nCmdShow)
     {
         if (!WindowBase::Initialize(hInstance, nCmdShow))
             return false;
 
-        InitializeWebView();
-        SetupIpcHandlers();
-        return true;
-    }
+        services::MediaService::Instance().Initialize();
 
-    void MainWindow::InitializeWebView()
-    {
-        webview_ = std::make_unique<WebViewHost>(hwnd_);
-        webview_->SetMessageCallback([this](const std::wstring &message)
-                                     { ipcManager_->HandleWebMessage(message); });
-        webview_->SetInitCallback([this](bool success)
-                                  {
-        if (success) {
-            webview_->Navigate(L"http://localhost:3000");
-        } });
-        webview_->Initialize();
+        if (!services::MediaService::Instance().Initialize())
+        {
+            utils::Logger::Error("Failed to initialize MediaService");
+            return false;
+        }
+
+        InitializeWebView();
+        return true;
     }
 
     void MainWindow::SetupIpcHandlers()
     {
-        // Add handlers for API requests
-        // Example: movies/list
-        ipcManager_->RegisterHandler("movies/list", [](const ipc::json &payload, auto respond)
+        utils::Logger::Info("Setting up IPC handlers...");
+        ipcManager_->RegisterHandler("movies", [](const ipc::json &payload, auto respond)
                                      {
-                                         respond({{"success", true}, {"movies", {}}}); // Stub response
-                                     });
-        ipcManager_->RegisterHandler("navigate",
-                                     [this](const ipc::json &payload, const std::function<void(const ipc::json &)> &respond)
-                                     {
-                                         try
-                                         {
-                                             std::string movieId = payload["id"].get<std::string>();
-                                             utils::Logger::Info("Received movieId: " + movieId);
+        try {
+            utils::Logger::Info("Processing 'movies' IPC request.");
+            auto result = services::MediaService::Instance().GetPopularMovies().get();
+            auto result1 = services::MediaService::Instance().GetPopularMovies(2).get();
 
-                                             // Here you would typically fetch the movie data based on the ID
-                                             // For now, creating sample data
-                                             json movieData = {
-                                                 {"image", "https://example.com/movie-" + movieId + ".jpg"},
-                                                 {"title", "Movie " + movieId},
-                                                 {"genre", "Action"},
-                                                 {"releaseDate", "2024"},
-                                                 {"rating", "8.5"},
-                                                 {"description", "Description for movie " + movieId}};
+            if (result.IsOk() && result1.IsOk())
+            {
+                ipc::json movieArray = ipc::json::array();
+                
+                for (const auto &movie : result.Value()) {
+                    try {
+                        // Create safe getters with default values
+                        auto safeTitle = movie.title.empty() ? "Untitled" : movie.title;
+                        auto safeOverview = movie.overview.empty() ? "No overview available" : movie.overview;
+                        auto safeId = movie.imdbId.empty() ? "unknown" : movie.imdbId;
+                        
+                        ipc::json movieJson = {
+                            {"title", safeTitle},
+                            {"overview", safeOverview},
+                            {"rating", movie.rating},
+                            {"voteCount", movie.voteCount},
+                            {"id", safeId}
+                        };
 
-                                             std::string jsonStr = movieData.dump();
-                                             std::wstring wideJsonStr = utils::Utf8ToWide(jsonStr);
+                        // Handle optional poster path separately
+                        if (movie.posterPath && !movie.posterPath->empty()) {
+                            movieJson["poster"] = *movie.posterPath;
+                        } else {
+                            movieJson["poster"] = nullptr;
+                        }
 
-                                             utils::Logger::Info("UTF-8 JSON: " + jsonStr);
-                                             utils::Logger::Info("Wide JSON: " + std::string(wideJsonStr.begin(), wideJsonStr.end()));
-
-                                             webview_->NavigateAndSendData(
-                                                 utils::Utf8ToWide("http://localhost:3000/movie-details"),
-                                                 wideJsonStr);
-
-                                             respond(json{{"success", true}});
-                                         }
-                                         catch (const std::exception &e)
-                                         {
-                                             respond(json{
-                                                 {"success", false},
-                                                 {"error", e.what()}});
-                                         }
-                                     });
+                        movieArray.push_back(movieJson);
+                        
+                        utils::Logger::Info("Successfully processed movie: " + safeTitle);
+                    }
+                    catch (const std::exception& movieEx) {
+                        utils::Logger::Error("Error processing individual movie: " + std::string(movieEx.what()));
+                        // Continue processing other movies even if one fails
+                        continue;
+                    }
+                }
+                
+                
+                ipc::json response = {
+                    {"success", true},
+                    {"movies", movieArray},
+                };
+                
+                utils::Logger::Info("Sending response with " + 
+                    std::to_string(movieArray.size()) + " movies");
+                    
+                respond(response);
+                
+                utils::Logger::Info("Response sent successfully");
+            }
+            else
+            {
+                utils::Logger::Error(std::string("Error: ") + result.GetError().message);
+                respond({
+                    {"success", false},
+                    {"error", result.GetError().message},
+                });
+            }
+        } catch (const std::exception &ex) {
+            utils::Logger::Error(std::string("Exception in 'movies' handler: ") + ex.what());
+            respond({
+                {"success", false},
+                {"error", ex.what()},
+            });
+        } });
     }
 
     std::wstring MainWindow::GetWindowTitle() const

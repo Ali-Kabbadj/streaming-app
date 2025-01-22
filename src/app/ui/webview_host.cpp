@@ -88,11 +88,32 @@ namespace app::ui
         }
     }
 
+    // void WebViewHost::PostWebMessage(const std::wstring &message)
+    // {
+    //     if (webview_)
+    //     {
+    //         webview_->PostWebMessageAsJson(message.c_str());
+    //     }
+    // }
+
     void WebViewHost::PostWebMessage(const std::wstring &message)
     {
-        if (webview_)
+        if (!webview_)
         {
-            webview_->PostWebMessageAsJson(message.c_str());
+            utils::Logger::Error("WebView is null");
+            return;
+        }
+
+        if (message.empty())
+        {
+            utils::Logger::Warning("Empty message received");
+            return;
+        }
+
+        HRESULT hr = webview_->PostWebMessageAsJson(message.c_str());
+        if (FAILED(hr))
+        {
+            utils::Logger::Error("Failed to post web message");
         }
     }
 
@@ -101,12 +122,16 @@ namespace app::ui
         if (!webview_)
             return;
 
+        utils::Logger::Info("Setting up WebView message handler...");
+
         webview_->add_WebMessageReceived(
             Microsoft::WRL::Callback<ICoreWebView2WebMessageReceivedEventHandler>(
                 [this](ICoreWebView2 *webview, ICoreWebView2WebMessageReceivedEventArgs *args) -> HRESULT
                 {
                     LPWSTR message;
                     args->get_WebMessageAsJson(&message);
+
+                    utils::Logger::Info("WebMessage received: " + utils::WideToUtf8(message));
 
                     if (messageCallback_)
                     {
@@ -118,6 +143,8 @@ namespace app::ui
                 })
                 .Get(),
             nullptr);
+
+        utils::Logger::Info("WebView message handler setup complete");
     }
 
     // webview_host.cpp
@@ -147,7 +174,7 @@ namespace app::ui
         HRESULT hr = webview_->Navigate(url.c_str());
         if (FAILED(hr))
         {
-            utils::Logger::Error("Navigation failed with HRESULT: {}", hr);
+            // utils::Logger::Error("Navigation failed with HRESULT: {}", hr);
             currentNavigation_->state = NavigationState::Error;
             return;
         }

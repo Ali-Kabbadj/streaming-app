@@ -27,7 +27,7 @@
 {
   "cmake.configureOnOpen": true,
   "cmake.buildDirectory": "${workspaceFolder}/build",
-  "cmake.installPrefix": "${workspaceFolder}/out/install/${presetName}",
+  // "cmake.installPrefix": "${workspaceFolder}/out/install/${presetName}",
   "cmake.debugConfig": {
     "stopAtEntry": false,
     "MIMode": "gdb"
@@ -135,7 +135,8 @@
     "xtr1common": "cpp",
     "xtree": "cpp",
     "xutility": "cpp",
-    "xstddef": "cpp"
+    "xstddef": "cpp",
+    "resumable": "cpp"
   },
   "cmake.generator": "Visual Studio 17 2022",
   "cmake.preferredGenerators": ["Visual Studio 17 2022"],

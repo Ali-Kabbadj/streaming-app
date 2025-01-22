@@ -35,11 +35,23 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 # Configure compilation
 if(MSVC)
-    add_compile_options(/W4 /WX)
+    add_compile_options(/EHsc /W4)
+
     add_definitions(-D_WIN32_WINNT=0x0A00) # Target Windows 10
+      add_compile_options(/EHsc)
+    # Optional: To suppress specific warnings
+    add_compile_options(/wd4530)
+    add_compile_options(/wd4251)
 else()
     add_compile_options(-Wall -Wextra -pedantic -Werror)
 endif()
+
+if(CMAKE_VERSION VERSION_GREATER "3.15")
+    cmake_policy(SET CMP0091 NEW)  # Enable new MSVC runtime library flag handling
+endif()
+
+# If you still see the warning, you can explicitly set the runtime library
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
 
 # Set output directories
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
@@ -51,13 +63,17 @@ set(VCPKG_INSTALLED_DIR ${CMAKE_BINARY_DIR}/vcpkg_installed)
 
 # Find dependencies
 
-find_package(WIL CONFIG REQUIRED)
+
 find_package(nlohmann_json CONFIG REQUIRED)
+find_package(curl CONFIG REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
 find_package(GTest CONFIG REQUIRED)
 find_package(cpprestsdk CONFIG REQUIRED)
 find_package(unofficial-webview2 CONFIG REQUIRED)
+find_package(WIL CONFIG REQUIRED)
+find_package(date CONFIG REQUIRED)
+
 # Add subdirectories
 add_subdirectory(src)
 
