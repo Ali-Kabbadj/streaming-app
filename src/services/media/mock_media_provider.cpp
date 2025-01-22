@@ -5,53 +5,86 @@
 
 namespace app::services
 {
-
-    namespace
-    {
-        std::random_device rd;
-        std::mt19937 gen(rd());
-        std::uniform_real_distribution<> ratingDist(6.0, 9.5);
-        std::uniform_int_distribution<> voteDist(1000, 50000);
-        std::uniform_int_distribution<> runtimeDist(90, 180);
-
-        const std::vector<std::string> MOCK_GENRES = {
-            "Action", "Adventure", "Comedy", "Drama", "Sci-Fi", "Thriller"};
-
-        const std::vector<std::string> MOCK_DIRECTORS = {
-            "Christopher Nolan", "Steven Spielberg", "Martin Scorsese"};
-
-        const std::vector<std::string> MOCK_ACTORS = {
-            "Tom Hanks", "Leonardo DiCaprio", "Meryl Streep", "Brad Pitt"};
-    }
-
-    std::future<utils::Result<std::vector<domain::MovieInfo>>>
-    MockMediaProvider::GetPopularMovies(int page)
+    std::future<utils::Result<std::vector<domain::TvShowInfo>>>
+    MockMediaProvider::GetPopularTvShows(int page)
     {
         return std::async(std::launch::async, [page]()
                           {
-        std::this_thread::sleep_for(std::chrono::milliseconds(500)); // Simulate network delay
-        
-        std::vector<domain::MovieInfo> movies;
-        for (int i = 1; i <= 20; ++i) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+            
+            std::vector<domain::TvShowInfo> shows;
+            for (int i = 1; i <= 20; ++i) {
+                domain::TvShowInfo show;
+                show.title = "Mock TV Show " + std::to_string((page - 1) * 20 + i);
+                show.overview = "This is a mock TV show description for testing purposes.";
+                show.rating = ratingDist(gen);
+                show.voteCount = voteDist(gen);
+                show.numberOfSeasons = i % 10 + 1;
+                show.numberOfEpisodes = show.numberOfSeasons * 12;
+                show.status = "Continuing";
+                show.releaseDate = std::chrono::system_clock::now() - 
+                                 std::chrono::hours(24 * 365 * (i % 5));
+                show.genres = {MOCK_GENRES[i % MOCK_GENRES.size()]};
+                shows.push_back(std::move(show));
+            }
+            
+            return utils::Result<std::vector<domain::TvShowInfo>>(std::move(shows)); });
+    }
+
+    std::future<utils::Result<domain::MovieInfo>>
+    MockMediaProvider::GetMovieDetails(const std::string &id)
+    {
+        return std::async(std::launch::async, [id]()
+                          {
+            std::this_thread::sleep_for(std::chrono::milliseconds(300));
+            
             domain::MovieInfo movie;
-            movie.title = "Mock Movie " + std::to_string((page - 1) * 20 + i);
-            movie.overview = "This is a mock movie description for testing purposes.";
+            movie.title = "Movie " + id;
+            movie.overview = "Detailed description for movie " + id;
             movie.rating = ratingDist(gen);
             movie.voteCount = voteDist(gen);
             movie.runtime = runtimeDist(gen);
             movie.releaseDate = std::chrono::system_clock::now() - 
-                               std::chrono::hours(24 * 365 * (i % 5));
-            movie.genres = {MOCK_GENRES[i % MOCK_GENRES.size()]};
-            movie.director = MOCK_DIRECTORS[i % MOCK_DIRECTORS.size()];
-            movie.cast = {MOCK_ACTORS[i % MOCK_ACTORS.size()]};
-            movie.imdbId = "tt" + std::to_string(1000000 + i);
-            movies.push_back(std::move(movie));
-        }
-        
-        return utils::Result<std::vector<domain::MovieInfo>>(std::move(movies)); });
+                               std::chrono::hours(24 * 365 * 2);
+            movie.genres = {"Action", "Drama"};
+            movie.director = MOCK_DIRECTORS[0];
+            movie.cast = {MOCK_ACTORS[0], MOCK_ACTORS[1]};
+            movie.imdbId = "tt" + id;
+            
+            return utils::Result<domain::MovieInfo>(std::move(movie)); });
     }
 
-    // Implement other mock methods similarly...
-    // GetPopularTvShows, GetMovieDetails, GetTvShowDetails
-
-} // namespace app::services
+    std::future<utils::Result<domain::TvShowInfo>>
+    MockMediaProvider::GetTvShowDetails(const std::string &id)
+    {
+        return std::async(std::launch::async, [id]()
+                          {
+            std::this_thread::sleep_for(std::chrono::milliseconds(300));
+            
+            domain::TvShowInfo show;
+            show.title = "TV Show " + id;
+            show.overview = "Detailed description for TV show " + id;
+            show.rating = ratingDist(gen);
+            show.voteCount = voteDist(gen);
+            show.numberOfSeasons = 5;
+            show.numberOfEpisodes = 60;
+            show.status = "Continuing";
+            show.releaseDate = std::chrono::system_clock::now() - 
+                             std::chrono::hours(24 * 365 * 2);
+            show.genres = {"Drama", "Thriller"};
+            
+            // Add some episodes
+            for (int i = 1; i <= 10; ++i) {
+                domain::EpisodeInfo episode;
+                episode.title = "Episode " + std::to_string(i);
+                episode.overview = "Episode description " + std::to_string(i);
+                episode.episodeNumber = i;
+                episode.seasonNumber = 1;
+                episode.airDate = std::chrono::system_clock::now() - 
+                                std::chrono::hours(24 * i);
+                show.episodes.push_back(std::move(episode));
+            }
+            
+            return utils::Result<domain::TvShowInfo>(std::move(show)); });
+    }
+}

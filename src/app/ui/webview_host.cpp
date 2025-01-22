@@ -120,45 +120,6 @@ namespace app::ui
             nullptr);
     }
 
-    // void WebViewHost::NavigateAndSendData(const std::wstring &url, const std::wstring &jsonData)
-    // {
-    //     if (!webview_)
-    //     {
-    //         utils::Logger::Error("NavigateAndSendData: WebView is not initialized.");
-    //         return;
-    //     }
-
-    //     webview_->Navigate(url.c_str());
-
-    //     webview_->add_NavigationCompleted(
-    //         Microsoft::WRL::Callback<ICoreWebView2NavigationCompletedEventHandler>(
-    //             [this, jsonData](ICoreWebView2 *webview, ICoreWebView2NavigationCompletedEventArgs *args) -> HRESULT
-    //             {
-    //                 BOOL isSuccess;
-    //                 args->get_IsSuccess(&isSuccess);
-
-    //                 if (!isSuccess)
-    //                 {
-    //                     utils::Logger::Error("Navigation failed in NavigateAndSendData.");
-    //                     return E_FAIL;
-    //                 }
-
-    //                 if (jsonData.empty())
-    //                 {
-    //                     utils::Logger::Error("JSON data is empty. Not sending message.");
-    //                     return E_INVALIDARG;
-    //                 }
-
-    //                 utils::Logger::Info("Posting JSON message: " + std::string(jsonData.begin(), jsonData.end()));
-    //                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    //                 webview_->PostWebMessageAsJson(jsonData.c_str());
-
-    //                 return S_OK;
-    //             })
-    //             .Get(),
-    //         nullptr);
-    // }
-
     // webview_host.cpp
     void WebViewHost::NavigateAndSendData(const std::wstring &url, const std::wstring &jsonData)
     {
@@ -193,6 +154,46 @@ namespace app::ui
 
         // Register completion handler
         webview_->add_NavigationCompleted(handler, nullptr);
+    }
+
+    void WebViewHost::HandleNavigationCompleted(ICoreWebView2NavigationCompletedEventArgs *args)
+    {
+        if (!currentNavigation_)
+        {
+            return;
+        }
+
+        BOOL isSuccess;
+        args->get_IsSuccess(&isSuccess);
+
+        if (isSuccess)
+        {
+            if (!currentNavigation_->data.empty())
+            {
+                webview_->PostWebMessageAsJson(currentNavigation_->data.c_str());
+            }
+            currentNavigation_->state = NavigationState::Complete;
+        }
+        else
+        {
+            currentNavigation_->state = NavigationState::Error;
+            utils::Logger::Error("Navigation failed");
+        }
+
+        if (currentNavigation_->callback)
+        {
+            currentNavigation_->callback(isSuccess);
+        }
+    }
+
+    void WebViewHost::EnsureNavigationCleanup()
+    {
+        if (currentNavigation_ &&
+            (currentNavigation_->state == NavigationState::Complete ||
+             currentNavigation_->state == NavigationState::Error))
+        {
+            currentNavigation_.reset();
+        }
     }
 
 } // namespace app::webview

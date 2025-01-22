@@ -1,22 +1,41 @@
-// core/config/config_manager.hpp
-
-#include <unordered_map>
-namespace app::congig
+namespace app::config
 {
-    // core/config/config_manager.hpp
     class ConfigManager
     {
     public:
-        static ConfigManager &Instance();
+        static ConfigManager &Instance()
+        {
+            static ConfigManager instance;
+            return instance;
+        }
 
         template <typename T>
-        Result<T> Get(const std::string &key) const;
+        utils::Result<T> Get(const std::string &key) const
+        {
+            auto it = settings_.find(key);
+            if (it == settings_.end())
+            {
+                return utils::Result<T>::Error("Configuration key not found: " + key);
+            }
+
+            try
+            {
+                return utils::Result<T>(std::get<T>(it->second));
+            }
+            catch (const std::bad_variant_access &)
+            {
+                return utils::Result<T>::Error("Type mismatch for key: " + key);
+            }
+        }
 
         template <typename T>
-        void Set(const std::string &key, const T &value);
+        void Set(const std::string &key, const T &value)
+        {
+            settings_[key] = value;
+        }
 
     private:
         std::unordered_map<std::string, std::variant<std::string, int, bool>> settings_;
-        // ... implementation
+        ConfigManager() = default;
     };
 }

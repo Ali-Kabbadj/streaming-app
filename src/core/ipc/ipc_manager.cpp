@@ -1,7 +1,6 @@
 #include "ipc_manager.hpp"
 #include "utils/logger.hpp"
 
-
 namespace app::ipc
 {
 
@@ -63,6 +62,35 @@ namespace app::ipc
         json message = {{"id", id}, {"payload", response}};
         std::wstring wideMessage(message.dump().begin(), message.dump().end());
         webviewCallback_(wideMessage);
+    }
+
+    void IpcManager::RegisterNavigationHandler()
+    {
+        RegisterHandler("navigate", [this](const json &payload, auto respond)
+                        {
+            try {
+                NavigationRequest request{
+                    payload["route"].get<std::string>(),
+                    payload["data"]
+                };
+
+                ValidateAndProcessNavigation(request);
+                respond(json{{"success", true}});
+            } catch (const std::exception& e) {
+                respond(json{
+                    {"success", false},
+                    {"error", e.what()}
+                });
+            } });
+    }
+
+    void IpcManager::ValidateAndProcessNavigation(const NavigationRequest &request)
+    {
+        if (!request.validateRoute())
+        {
+            throw std::invalid_argument("Invalid route format");
+        }
+        // Process navigation...
     }
 
 } // namespace app::ipc
