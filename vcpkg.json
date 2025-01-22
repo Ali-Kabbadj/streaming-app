@@ -1,0 +1,6 @@
+{
+  "name": "streaming-app",
+  "version": "0.1.0",
+  "dependencies": ["webview2", "wil", "nlohmann-json", "spdlog"],
+  "builtin-baseline": "cf035d9916a0a23042b41fcae7ee0386d245af08"
+}
