@@ -11,6 +11,7 @@ add_library(core
     ipc/ipc_manager.cpp
     ipc/ipc_manager.hpp
     ipc/ipc_types.hpp
+    events/event_system.hpp
 )
 
 target_include_directories(core

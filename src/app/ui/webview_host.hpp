@@ -6,6 +6,7 @@
 #include <functional>
 #include <nlohmann/json.hpp>
 #include <WebView2EnvironmentOptions.h>
+#include <mutex>
 using json = nlohmann::json;
 
 namespace app::ui
@@ -13,6 +14,22 @@ namespace app::ui
     class WebViewHost
     {
     public:
+        enum class NavigationState
+        {
+            Idle,
+            Navigating,
+            WaitingForData,
+            Complete,
+            Error
+        };
+
+        struct NavigationContext
+        {
+            std::wstring url;
+            std::wstring data;
+            NavigationState state;
+            std::function<void(bool)> callback;
+        };
         explicit WebViewHost(HWND parentWindow);
         ~WebViewHost();
 
@@ -35,6 +52,12 @@ namespace app::ui
         nlohmann::json FetchMovieDetails(int movieId); // Function to fetch movie details
 
     private:
+        std::unique_ptr<NavigationContext> currentNavigation_;
+        std::mutex navigationMutex_;
+
+        void HandleNavigationCompleted(ICoreWebView2NavigationCompletedEventArgs *args);
+        void EnsureNavigationCleanup();
+
         HWND parentWindow_;
         Microsoft::WRL::ComPtr<ICoreWebView2> webview_;
         Microsoft::WRL::ComPtr<ICoreWebView2Controller> controller_;

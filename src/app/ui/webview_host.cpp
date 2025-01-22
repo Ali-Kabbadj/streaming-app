@@ -7,6 +7,7 @@
 #include <wil/com.h>
 #include "utils/win32_utils.hpp"
 #include <spdlog/details/os-inl.h>
+#include "utils/logger.hpp"
 
 namespace app::ui
 {
@@ -119,43 +120,79 @@ namespace app::ui
             nullptr);
     }
 
+    // void WebViewHost::NavigateAndSendData(const std::wstring &url, const std::wstring &jsonData)
+    // {
+    //     if (!webview_)
+    //     {
+    //         utils::Logger::Error("NavigateAndSendData: WebView is not initialized.");
+    //         return;
+    //     }
+
+    //     webview_->Navigate(url.c_str());
+
+    //     webview_->add_NavigationCompleted(
+    //         Microsoft::WRL::Callback<ICoreWebView2NavigationCompletedEventHandler>(
+    //             [this, jsonData](ICoreWebView2 *webview, ICoreWebView2NavigationCompletedEventArgs *args) -> HRESULT
+    //             {
+    //                 BOOL isSuccess;
+    //                 args->get_IsSuccess(&isSuccess);
+
+    //                 if (!isSuccess)
+    //                 {
+    //                     utils::Logger::Error("Navigation failed in NavigateAndSendData.");
+    //                     return E_FAIL;
+    //                 }
+
+    //                 if (jsonData.empty())
+    //                 {
+    //                     utils::Logger::Error("JSON data is empty. Not sending message.");
+    //                     return E_INVALIDARG;
+    //                 }
+
+    //                 utils::Logger::Info("Posting JSON message: " + std::string(jsonData.begin(), jsonData.end()));
+    //                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    //                 webview_->PostWebMessageAsJson(jsonData.c_str());
+
+    //                 return S_OK;
+    //             })
+    //             .Get(),
+    //         nullptr);
+    // }
+
+    // webview_host.cpp
     void WebViewHost::NavigateAndSendData(const std::wstring &url, const std::wstring &jsonData)
     {
-        if (!webview_)
+        std::lock_guard<std::mutex> lock(navigationMutex_);
+
+        // Clean up any existing navigation
+        EnsureNavigationCleanup();
+
+        // Create new navigation context
+        currentNavigation_ = std::make_unique<NavigationContext>(
+            NavigationContext{url, jsonData, NavigationState::Idle, nullptr});
+
+        // Setup navigation completed handler
+        auto handler = Microsoft::WRL::Callback<ICoreWebView2NavigationCompletedEventHandler>(
+                           [this](ICoreWebView2 *sender, ICoreWebView2NavigationCompletedEventArgs *args) -> HRESULT
+                           {
+                               HandleNavigationCompleted(args);
+                               return S_OK;
+                           })
+                           .Get();
+
+        // Start navigation
+        currentNavigation_->state = NavigationState::Navigating;
+
+        HRESULT hr = webview_->Navigate(url.c_str());
+        if (FAILED(hr))
         {
-            utils::Logger::Error("NavigateAndSendData: WebView is not initialized.");
+            utils::Logger::Error("Navigation failed with HRESULT: {}", hr);
+            currentNavigation_->state = NavigationState::Error;
             return;
         }
 
-        webview_->Navigate(url.c_str());
-
-        webview_->add_NavigationCompleted(
-            Microsoft::WRL::Callback<ICoreWebView2NavigationCompletedEventHandler>(
-                [this, jsonData](ICoreWebView2 *webview, ICoreWebView2NavigationCompletedEventArgs *args) -> HRESULT
-                {
-                    BOOL isSuccess;
-                    args->get_IsSuccess(&isSuccess);
-
-                    if (!isSuccess)
-                    {
-                        utils::Logger::Error("Navigation failed in NavigateAndSendData.");
-                        return E_FAIL;
-                    }
-
-                    if (jsonData.empty())
-                    {
-                        utils::Logger::Error("JSON data is empty. Not sending message.");
-                        return E_INVALIDARG;
-                    }
-
-                    utils::Logger::Info("Posting JSON message: " + std::string(jsonData.begin(), jsonData.end()));
-                    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-                    webview_->PostWebMessageAsJson(jsonData.c_str());
-
-                    return S_OK;
-                })
-                .Get(),
-            nullptr);
+        // Register completion handler
+        webview_->add_NavigationCompleted(handler, nullptr);
     }
 
 } // namespace app::webview
