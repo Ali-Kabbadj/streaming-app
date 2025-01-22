@@ -25,9 +25,12 @@ namespace app::ui
         webview_ = std::make_unique<WebViewHost>(hwnd_);
         webview_->SetMessageCallback([this](const std::wstring &message)
                                      { ipcManager_->HandleWebMessage(message); });
-
+        webview_->SetInitCallback([this](bool success)
+                                  {
+        if (success) {
+            webview_->Navigate(L"http://localhost:3000");
+        } });
         webview_->Initialize();
-        webview_->Navigate(L"http://localhost:3000"); // Replace with your front-end URL
     }
 
     void MainWindow::SetupIpcHandlers()
@@ -37,6 +40,43 @@ namespace app::ui
         ipcManager_->RegisterHandler("movies/list", [](const ipc::json &payload, auto respond)
                                      {
                                          respond({{"success", true}, {"movies", {}}}); // Stub response
+                                     });
+        ipcManager_->RegisterHandler("navigate",
+                                     [this](const ipc::json &payload, const std::function<void(const ipc::json &)> &respond)
+                                     {
+                                         try
+                                         {
+                                             std::string movieId = payload["id"].get<std::string>();
+                                             utils::Logger::Info("Received movieId: " + movieId);
+
+                                             // Here you would typically fetch the movie data based on the ID
+                                             // For now, creating sample data
+                                             json movieData = {
+                                                 {"image", "https://example.com/movie-" + movieId + ".jpg"},
+                                                 {"title", "Movie " + movieId},
+                                                 {"genre", "Action"},
+                                                 {"releaseDate", "2024"},
+                                                 {"rating", "8.5"},
+                                                 {"description", "Description for movie " + movieId}};
+
+                                             std::string jsonStr = movieData.dump();
+                                             std::wstring wideJsonStr = utils::Utf8ToWide(jsonStr);
+
+                                             utils::Logger::Info("UTF-8 JSON: " + jsonStr);
+                                             utils::Logger::Info("Wide JSON: " + std::string(wideJsonStr.begin(), wideJsonStr.end()));
+
+                                             webview_->NavigateAndSendData(
+                                                 utils::Utf8ToWide("http://localhost:3000/movie-details"),
+                                                 wideJsonStr);
+
+                                             respond(json{{"success", true}});
+                                         }
+                                         catch (const std::exception &e)
+                                         {
+                                             respond(json{
+                                                 {"success", false},
+                                                 {"error", e.what()}});
+                                         }
                                      });
     }
 

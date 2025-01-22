@@ -1,6 +1,7 @@
 #include "ipc_manager.hpp"
 #include "utils/logger.hpp"
 
+
 namespace app::ipc
 {
 
@@ -11,7 +12,17 @@ namespace app::ipc
     {
         try
         {
-            std::string utf8Message(message.begin(), message.end());
+            // Allocate a buffer for the converted UTF-8 string
+            int bufferSize = WideCharToMultiByte(CP_UTF8, 0, message.c_str(), -1, nullptr, 0, nullptr, nullptr);
+            if (bufferSize == 0)
+            {
+                throw std::runtime_error("Failed to calculate the buffer size for UTF-8 conversion.");
+            }
+
+            // Convert the wide string to a UTF-8 string
+            std::string utf8Message(bufferSize - 1, '\0'); // Subtract 1 to ignore the null terminator
+            WideCharToMultiByte(CP_UTF8, 0, message.c_str(), -1, &utf8Message[0], bufferSize, nullptr, nullptr);
+
             json data = json::parse(utf8Message);
 
             std::string type = data["type"];

@@ -2,7 +2,7 @@
 #include <Windows.h>
 #include <string>
 
-namespace app::window
+namespace app::ui
 {
 
     class WindowBase

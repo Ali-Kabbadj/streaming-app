@@ -2,6 +2,7 @@
 #include "window_base.hpp"
 #include "ipc/ipc_manager.hpp"
 #include "webview_host.hpp"
+#include "utils/win32_utils.hpp"
 #include <memory>
 
 namespace app::ui

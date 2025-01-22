@@ -1,32 +1,17 @@
 #pragma once
-#include "core/utils/result.hpp"
-#include <nlohmann/json.hpp>
+#include <unordered_map>
 #include <functional>
 #include <string>
-#include <unordered_map>
-#include <optional>
+#include <nlohmann/json.hpp>
+#include <Windows.h>
+#include <string>
 
 namespace app::ipc
 {
 
     using json = nlohmann::json;
-
-    struct IpcMessage
-    {
-        std::string type;
-        std::string id;
-        json payload;
-    };
-
-    struct IpcResponse
-    {
-        std::string id;
-        json payload;
-        std::optional<std::string> error;
-    };
-
     using WebMessageCallback = std::function<void(const std::wstring &)>;
-    using IpcHandlerCallback = std::function<void(const IpcMessage &, std::function<void(const IpcResponse &)>)>;
+    using IpcHandlerCallback = std::function<void(const json &, std::function<void(const json &)>)>;
 
     class IpcManager
     {
@@ -34,15 +19,15 @@ namespace app::ipc
         IpcManager();
         ~IpcManager();
 
-        utils::Result<void> HandleWebMessage(const std::wstring &message);
+        void HandleWebMessage(const std::wstring &message);
         void SetWebViewCallback(WebMessageCallback callback);
         void RegisterHandler(const std::string &type, IpcHandlerCallback handler);
-        void SendResponse(const IpcResponse &response);
 
     private:
         WebMessageCallback webviewCallback_;
         std::unordered_map<std::string, IpcHandlerCallback> handlers_;
-        utils::Result<IpcMessage> ParseMessage(const std::wstring &message);
+
+        void SendResponse(const std::string &id, const json &response);
     };
 
 } // namespace app::ipc

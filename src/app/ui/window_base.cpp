@@ -2,7 +2,7 @@
 #include "utils/logger.hpp"
 #include "utils/win32_utils.hpp"
 
-namespace app::window
+namespace app::ui
 {
 
     WindowBase::WindowBase() : hwnd_(nullptr), hInstance_(nullptr) {}
